@@ -1,38 +1,59 @@
+const express = require('express');
 const http = require('http');
-const app = require('./app');
-const { Server } = require('socket.io');
+const socketIo = require('socket.io');
+const path = require('path');
 const connectDB = require('./config/db');
+const authRoutes = require('./routes/auth');
+const chatRoutes = require('./routes/chat');
 
-// Port
-const PORT = process.env.PORT || 3000;
+// Inicjalizacja aplikacji
+const app = express();
 
-// Połączenie z bazą danych.
+// Middleware
+app.use(express.json()); // Obsługa JSON w ciele żądań
+
+// Połączenie z bazą danych
 connectDB();
 
-// Serwer HTTP
-const server = http.createServer(app)
+// Trasy API
+app.use('/api/auth', authRoutes); // Trasy dla rejestracji i logowania
+app.use('/api/chat', chatRoutes); // Trasy dla wiadomości
 
-// Inicjalizowanie Socket.io
-const io = new Server(server, {
-    cors: {
-        origin: '*',
-        methods: ['GET', 'POST']
-    }
+// Serwowanie plików statycznych
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
+
+// Tworzenie serwera HTTP i integracja Socket.io
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: { origin: '*' }, // Zezwolenie na dostęp z dowolnego źródła (dostosuj na produkcji)
 });
 
+// Socket.io dla wiadomości w czasie rzeczywistym
 io.on('connection', (socket) => {
-    console.log("User connected: ", socket.id);
+  console.log('New client connected');
 
-    socket.on("send_message", (data) => {
-        console.log("Message received: ", data);
-        io.emit("receive_message", data);
-    })
+  // Obsługa wiadomości przychodzących
+  socket.on('send_message', (data) => {
+    console.log('Message received:', data);
+    io.emit('receive_message', data); // Emitowanie wiadomości do wszystkich klientów
+  });
 
-    socket.on('disconnected', () => {
-        console.log("User disconnected: ", socket.id)
-    })
-})
+  // Obsługa rozłączenia klienta
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
+});
 
+// Przekierowanie na frontend dla wszystkich innych tras
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Port serwera
+const PORT = process.env.PORT || 3000;
+
+// Uruchomienie serwera
 server.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`)
+  console.log(`Server running on port ${PORT}`);
 });
