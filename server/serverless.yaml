@@ -1,0 +1,23 @@
+service: chat-app
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: dev
+
+functions:
+  app:
+    handler: server.handler
+    events:
+      - http:
+          path: /{proxy+}
+          method: any
+          cors: true
+        
+package:
+  individually: true
+  excludeDevDependencies: true
+
+plugins:
+  - serverless-offline

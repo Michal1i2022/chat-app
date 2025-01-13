@@ -5,6 +5,7 @@ const path = require('path');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chat');
+const serverless = require('serverless-http');
 
 // Inicjalizacja aplikacji
 const app = express();
@@ -20,8 +21,7 @@ app.use('/api/auth', authRoutes); // Trasy dla rejestracji i logowania
 app.use('/api/chat', chatRoutes); // Trasy dla wiadomości
 
 // Serwowanie plików statycznych
-app.use(express.static(path.join(__dirname, '..', 'public')));
-
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Tworzenie serwera HTTP i integracja Socket.io
 const server = http.createServer(app);
@@ -50,12 +50,5 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Port serwera
-const PORT = process.env.PORT || 3000;
-
-// Uruchomienie serwera
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
-//w
+// Export funkcji dla AWS Lambda
+module.exports.handler = serverless(app);
